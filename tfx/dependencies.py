@@ -75,6 +75,7 @@ def make_required_install_packages():
       'attrs>=19.3.0,<21',
       'click>=7,<8',
       'google-api-python-client>=1.7.8,<2',
+      'google-cloud-aiplatform>=0.5.0,<1',
       'grpcio>=1.28.1,<2',
       # TODO(b/173976603): remove pinned keras-tuner upperbound when its
       # dependency expecatation with TensorFlow is sorted out.
@@ -113,7 +114,7 @@ def make_required_install_packages():
 
 def make_extra_packages_test():
   """Prepare extra packages needed for running unit tests."""
-  # Note: It is okay to pin packages to exact verions in this list to minimize
+  # Note: It is okay to pin packages to exact versions in this list to minimize
   # conflicts.
   return [
       'apache-airflow[mysql]>=1.10.14,<3',
