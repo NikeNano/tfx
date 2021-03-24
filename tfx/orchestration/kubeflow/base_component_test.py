@@ -25,7 +25,6 @@ from tfx.orchestration import data_types
 from tfx.orchestration import pipeline as tfx_pipeline
 from tfx.orchestration.kubeflow import base_component
 from tfx.orchestration.kubeflow.proto import kubeflow_pb2
-from tfx.orchestration.launcher import in_process_component_launcher
 from tfx.proto.orchestration import pipeline_pb2
 from tfx.types import channel_utils
 from tfx.types import standard_artifacts
@@ -60,15 +59,12 @@ class BaseComponentTest(tf.test.TestCase):
     with dsl.Pipeline('test_pipeline'):
       self.component = base_component.BaseComponent(
           component=statistics_gen,
-          component_launcher_class=in_process_component_launcher
-          .InProcessComponentLauncher,
           depends_on=set(),
           pipeline=pipeline,
           pipeline_name=self._test_pipeline_name,
           pipeline_root=test_pipeline_root,
           tfx_image='container_image',
           kubeflow_metadata_config=self._metadata_config,
-          component_config=None,
           tfx_ir=self._tfx_ir,
       )
     self.tfx_component = statistics_gen
@@ -97,12 +93,6 @@ class BaseComponentTest(tf.test.TestCase):
         '[]',
         '--additional_pipeline_args',
         '{}',
-        '--component_launcher_class_path',
-        'tfx.orchestration.launcher.in_process_component_launcher.InProcessComponentLauncher',
-        '--serialized_component',
-        formatted_component_json,
-        '--component_config',
-        'null',
     ]
     try:
       self.assertEqual(
@@ -160,27 +150,22 @@ class BaseComponentWithPipelineParamTest(tf.test.TestCase):
     with dsl.Pipeline('test_pipeline'):
       self.example_gen = base_component.BaseComponent(
           component=example_gen,
-          component_launcher_class=in_process_component_launcher
-          .InProcessComponentLauncher,
           depends_on=set(),
           pipeline=pipeline,
           pipeline_name=self._test_pipeline_name,
           pipeline_root=test_pipeline_root,
           tfx_image='container_image',
           kubeflow_metadata_config=self._metadata_config,
-          component_config=None,
           tfx_ir=self._tfx_ir)
       self.statistics_gen = base_component.BaseComponent(
           component=statistics_gen,
-          component_launcher_class=in_process_component_launcher
-          .InProcessComponentLauncher,
           depends_on=set(),
           pipeline=pipeline,
           pipeline_name=self._test_pipeline_name,
           pipeline_root=test_pipeline_root,
           tfx_image='container_image',
           kubeflow_metadata_config=self._metadata_config,
-          component_config=None
+          tfx_ir=self._tfx_ir
       )
 
     self.tfx_example_gen = example_gen
@@ -190,14 +175,6 @@ class BaseComponentWithPipelineParamTest(tf.test.TestCase):
     # TODO(hongyes): make the whole args list in one golden file to keep
     # source of truth in same file.
     source_data_dir = os.path.join(os.path.dirname(__file__), 'testdata')
-    with open(os.path.join(source_data_dir,
-                           'statistics_gen.json')) as component_json_file:
-      formatted_statistics_gen = json.dumps(
-          json.load(component_json_file), sort_keys=True)
-    with open(os.path.join(source_data_dir,
-                           'example_gen.json')) as component_json_file:
-      formatted_example_gen = json.dumps(
-          json.load(component_json_file), sort_keys=True)
 
     statistics_gen_expected_args = [
         '--pipeline_name',
@@ -214,12 +191,6 @@ class BaseComponentWithPipelineParamTest(tf.test.TestCase):
         '[]',
         '--additional_pipeline_args',
         '{}',
-        '--component_launcher_class_path',
-        'tfx.orchestration.launcher.in_process_component_launcher.InProcessComponentLauncher',
-        '--serialized_component',
-        formatted_statistics_gen,
-        '--component_config',
-        'null',
         '--node_id',
         'StatisticsGen.foo',
     ]
@@ -238,12 +209,6 @@ class BaseComponentWithPipelineParamTest(tf.test.TestCase):
         '[]',
         '--additional_pipeline_args',
         '{}',
-        '--component_launcher_class_path',
-        'tfx.orchestration.launcher.in_process_component_launcher.InProcessComponentLauncher',
-        '--serialized_component',
-        formatted_example_gen,
-        '--component_config',
-        'null',
         '--node_id',
         'CsvExampleGen',
         '--tfx_ir',

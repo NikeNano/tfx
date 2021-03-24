@@ -27,15 +27,19 @@ import textwrap
 from typing import Dict, List, Text, Union
 
 import absl
+from tfx.dsl.compiler import constants
 from tfx.dsl.components.base import base_node
 from tfx.orchestration import data_types
 from tfx.orchestration.kubeflow import kubeflow_metadata_adapter
 from tfx.orchestration.kubeflow.proto import kubeflow_pb2
-from tfx.orchestration.launcher import base_component_launcher
+from tfx.orchestration.local import runner_utils
+from tfx.orchestration.portable import kubernetes_executor_operator
+from tfx.orchestration.portable import launcher
+from tfx.orchestration.portable import runtime_parameter_utils
+from tfx.proto.orchestration import executable_spec_pb2
+from tfx.proto.orchestration import pipeline_pb2
 from tfx.types import artifact
 from tfx.types import channel
-from tfx.utils import import_utils
-from tfx.utils import json_utils
 from tfx.utils import telemetry_utils
 
 from google.protobuf import json_format
@@ -292,6 +296,20 @@ def _dump_ui_metadata(component: base_node.BaseNode,
     json.dump(metadata, f)
 
 
+def _get_pipeline_node(pipeline: pipeline_pb2.Pipeline, node_id: str):
+  """Gets node of a certain node_id from a pipeline."""
+  result = None
+  for node in pipeline.nodes:
+    if (node.WhichOneof('node') == 'pipeline_node' and
+        node.pipeline_node.node_info.id == node_id):
+      result = node.pipeline_node
+  if not result:
+    logging.error('pipeline ir = %s\n', pipeline)
+    raise RuntimeError(f'Cannot find node with id {node_id} in pipeline ir.')
+
+  return result
+
+
 def main():
   # Log to the container's stdout so Kubeflow Pipelines UI can display logs to
   # the user.
@@ -303,61 +321,59 @@ def main():
   parser.add_argument('--pipeline_root', type=str, required=True)
   parser.add_argument('--kubeflow_metadata_config', type=str, required=True)
   parser.add_argument('--beam_pipeline_args', type=str, required=True)
-  parser.add_argument('--additional_pipeline_args', type=str, required=True)
-  parser.add_argument(
-      '--component_launcher_class_path', type=str, required=True)
   parser.add_argument('--enable_cache', action='store_true')
-  parser.add_argument('--serialized_component', type=str, required=True)
-  parser.add_argument('--component_config', type=str, required=True)
-
-  # TODO(b/182220464): Uses following flags and change to required.
-  parser.add_argument('--tfx_ir', type=str, required=False)
-  parser.add_argument('--node_id', type=str, required=False)
+  parser.add_argument('--tfx_ir', type=str, required=True)
+  parser.add_argument('--node_id', type=str, required=True)
 
   args = parser.parse_args()
 
-  component = json_utils.loads(args.serialized_component)
-  component_config = json_utils.loads(args.component_config)
-  component_launcher_class = import_utils.import_class_by_path(
-      args.component_launcher_class_path)
-  if not issubclass(component_launcher_class,
-                    base_component_launcher.BaseComponentLauncher):
-    raise TypeError(
-        'component_launcher_class "%s" is not subclass of base_component_launcher.BaseComponentLauncher'
-        % component_launcher_class)
+  tfx_ir = pipeline_pb2.Pipeline()
+  json_format.Parse(args.tfx_ir, tfx_ir)
+  logging.info('DO NOT SUBMIT the parsed ir is: %s', tfx_ir)
+  # Substitute the runtime parameter to be a concrete run_id
+  runtime_parameter_utils.substitute_runtime_parameter(
+      tfx_ir, {
+          constants.PIPELINE_RUN_ID_PARAMETER_NAME: os.environ['WORKFLOW_ID'],
+      })
+
+  deployment_config = runner_utils.extract_local_deployment_config(tfx_ir)
 
   kubeflow_metadata_config = kubeflow_pb2.KubeflowMetadataConfig()
   json_format.Parse(args.kubeflow_metadata_config, kubeflow_metadata_config)
   metadata_connection = kubeflow_metadata_adapter.KubeflowMetadataAdapter(
       _get_metadata_connection_config(kubeflow_metadata_config))
-  driver_args = data_types.DriverArgs(enable_cache=args.enable_cache)
 
-  beam_pipeline_args = json.loads(args.beam_pipeline_args)
-
-  additional_pipeline_args = json.loads(args.additional_pipeline_args)
-
-  launcher = component_launcher_class.create(
-      component=component,
-      pipeline_info=data_types.PipelineInfo(
-          pipeline_name=args.pipeline_name,
-          pipeline_root=args.pipeline_root,
-          run_id=os.environ['WORKFLOW_ID']),
-      driver_args=driver_args,
-      metadata_connection=metadata_connection,
-      beam_pipeline_args=beam_pipeline_args,
-      additional_pipeline_args=additional_pipeline_args,
-      component_config=component_config)
-
+  node_id = args.node_id
   # Attach necessary labels to distinguish different runner and DSL.
   # TODO(zhitaoli): Pass this from KFP runner side when the same container
   # entrypoint can be used by a different runner.
   with telemetry_utils.scoped_labels({
       telemetry_utils.LABEL_TFX_RUNNER: 'kfp',
   }):
-    execution_info = launcher.launch()
+    custom_executor_operators = {
+        executable_spec_pb2.ContainerExecutableSpec:
+            kubernetes_executor_operator.KubernetesExecutorOperator
+    }
+
+    executor_spec = runner_utils.extract_executor_spec(deployment_config,
+                                                       node_id)
+    custom_driver_spec = runner_utils.extract_custom_driver_spec(
+        deployment_config, node_id)
+
+    component_launcher = launcher.Launcher(
+        pipeline_node=_get_pipeline_node(tfx_ir, node_id),
+        mlmd_connection=metadata_connection,
+        pipeline_info=tfx_ir.pipeline_info,
+        pipeline_runtime_spec=tfx_ir.runtime_spec,
+        executor_spec=executor_spec,
+        custom_driver_spec=custom_driver_spec,
+        custom_executor_operators=custom_executor_operators)
+    logging.info('Component %s is running.', node_id)
+    component_launcher.launch()
+    logging.info('Component %s is finished.', node_id)
 
   # Dump the UI metadata.
-  _dump_ui_metadata(component, execution_info)
+  # _dump_ui_metadata(component, execution_info)
 
 
 if __name__ == '__main__':

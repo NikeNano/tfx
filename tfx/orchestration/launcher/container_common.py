@@ -114,6 +114,8 @@ def _resolve_container_command_line(
       return input_dict[cmd_arg.input_name][0].uri
     elif isinstance(cmd_arg, placeholders.OutputUriPlaceholder):
       return output_dict[cmd_arg.output_name][0].uri
+    elif isinstance(cmd_arg, placeholders.ExecPropertyPlaceholder):
+      return exec_properties[cmd_arg.key]
     elif isinstance(cmd_arg, placeholders.ConcatPlaceholder):
       resolved_items = [expand_command_line_arg(item) for item in cmd_arg.items]
       for item in resolved_items:
@@ -125,7 +127,7 @@ def _resolve_container_command_line(
       raise TypeError(
           ('Unsupported type of command-line arguments: "{}".'
            ' Supported types are {}.')
-          .format(type(cmd_arg), str(executor_specs.CommandlineArgumentType)))
+          .format(type(cmd_arg), str(placeholders.CommandlineArgumentType)))
 
   resolved_command_line = []
   for cmd_arg in (cmd_args or []):

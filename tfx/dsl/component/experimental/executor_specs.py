@@ -99,6 +99,16 @@ class TemplatedExecutorContainerSpec(executor_spec.ExecutorSpec):
       self, ph: placeholders.CommandlineArgumentType
   ) -> Union[str, placeholder.Placeholder]:
     if isinstance(ph, str):
+      # If there is no place holder.
+      return ph
+    elif isinstance(ph, placeholder.ArtifactPlaceholder):
+      # If the placeholder is already ArtifactPlaceholder for
+      # InputValuePlaceholder, InputUriPlaceholder and OutputUriPlaceholder
+      # in the new style placeholder.
+      return ph
+    elif isinstance(ph, placeholder.ExecPropertyPlaceholder):
+      # If the placeholder is already ExecPropertyPlaceholder in the new style
+      # placeholder.
       return ph
     elif isinstance(ph, placeholders.InputValuePlaceholder):
       return placeholder.input(ph.input_name)[0]
@@ -106,6 +116,8 @@ class TemplatedExecutorContainerSpec(executor_spec.ExecutorSpec):
       return placeholder.input(ph.input_name)[0].uri
     elif isinstance(ph, placeholders.OutputUriPlaceholder):
       return placeholder.output(ph.output_name)[0].uri
+    elif isinstance(ph, placeholders.ExecPropertyPlaceholder):
+      return placeholder.exec_property(ph.key)
     elif isinstance(ph, placeholders.ConcatPlaceholder):
       # operator.add wil use the overloaded __add__ operator for Placeholder
       # instances.

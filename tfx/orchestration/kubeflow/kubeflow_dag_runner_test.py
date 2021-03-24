@@ -134,9 +134,6 @@ class KubeflowDagRunnerTest(test_case_utils.TfxTest):
                       'parameters': [{
                           'name': 'pipeline-root',
                           'value': '{{inputs.parameters.pipeline-root}}'
-                      }, {
-                          'name': 'table-name',
-                          'value': '{{inputs.parameters.table-name}}'
                       }]
                   }
               }, {

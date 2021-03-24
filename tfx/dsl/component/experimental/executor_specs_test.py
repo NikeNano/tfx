@@ -29,9 +29,11 @@ class ExecutorSpecsTest(tf.test.TestCase):
     self._input_uri_placeholder = placeholders.InputUriPlaceholder('input_uri')
     self._output_uri_placeholder = placeholders.OutputUriPlaceholder(
         'output_uri')
+    self._exec_property_placeholder = placeholders.ExecPropertyPlaceholder(
+        'exec_property_key')
     self._concat_placeholder = placeholders.ConcatPlaceholder([
         self._text, self._input_value_placeholder, self._input_uri_placeholder,
-        self._output_uri_placeholder,
+        self._output_uri_placeholder, self._exec_property_placeholder,
     ])
     self._text_concat_placeholder = placeholders.ConcatPlaceholder(
         [self._text, 'text1', placeholders.ConcatPlaceholder(['text2']),])
@@ -155,6 +157,12 @@ class ExecutorSpecsTest(tf.test.TestCase):
                     }
                   }
                 }
+              }
+            }
+            expressions {
+              placeholder {
+                type: EXEC_PROPERTY
+                key: "exec_property_key"
               }
             }
           }

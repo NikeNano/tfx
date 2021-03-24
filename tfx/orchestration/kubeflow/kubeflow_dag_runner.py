@@ -31,7 +31,6 @@ from tfx.dsl.compiler import compiler as tfx_compiler
 from tfx.orchestration import data_types
 from tfx.orchestration import pipeline as tfx_pipeline
 from tfx.orchestration import tfx_runner
-from tfx.orchestration.config import config_utils
 from tfx.orchestration.config import pipeline_config
 from tfx.orchestration.kubeflow import base_component
 from tfx.orchestration.kubeflow import utils
@@ -324,20 +323,14 @@ class KubeflowDagRunner(tfx_runner.TfxRunner):
       for upstream_component in component.upstream_nodes:
         depends_on.add(component_to_kfp_op[upstream_component])
 
-      (component_launcher_class,
-       component_config) = config_utils.find_component_launch_info(
-           self._config, component)
-
       kfp_component = base_component.BaseComponent(
           component=component,
-          component_launcher_class=component_launcher_class,
           depends_on=depends_on,
           pipeline=pipeline,
           pipeline_name=pipeline.pipeline_info.pipeline_name,
           pipeline_root=pipeline_root,
           tfx_image=self._config.tfx_image,
           kubeflow_metadata_config=self._config.kubeflow_metadata_config,
-          component_config=component_config,
           pod_labels_to_attach=self._pod_labels_to_attach,
           tfx_ir=tfx_ir)
 
@@ -381,7 +374,7 @@ class KubeflowDagRunner(tfx_runner.TfxRunner):
 
     # Need to run this first to get self._params populated. Then KFP compiler
     # can correctly match default value with PipelineParam.
-    self._parse_parameter_from_pipeline(pipeline)
+    # self._parse_parameter_from_pipeline(pipeline)
 
     file_name = self._output_filename or pipeline.pipeline_info.pipeline_name + '.tar.gz'
     # Create workflow spec and write out to package.

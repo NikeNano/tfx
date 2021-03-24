@@ -94,10 +94,29 @@ class ConcatPlaceholder(object):
     return not self.__eq__(other)
 
 
+class ExecPropertyPlaceholder(json_utils.Jsonable):
+  """Represents a placeholder for the value of execution properties.
+
+  Represents a placeholder that will be replaced at runtime with the actual
+  value of the given key in the execution propoerty dict.
+  """
+
+  def __init__(self, key: Text):
+    self.key = key
+
+  def __eq__(self, other) -> bool:
+    return (isinstance(other, self.__class__) and
+            self.key == other.key)
+
+  def __ne__(self, other) -> bool:
+    return not self.__eq__(other)
+
+
 CommandlineArgumentType = Union[
     Text,
     InputValuePlaceholder,
     InputUriPlaceholder,
     OutputUriPlaceholder,
     ConcatPlaceholder,
+    ExecPropertyPlaceholder,
 ]
