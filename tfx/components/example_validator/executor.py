@@ -37,7 +37,7 @@ from tfx.utils import json_utils
 
 
 # Default file name for anomalies output.
-DEFAULT_FILE_NAME = 'SchemaDiff.pb'
+DEFAULT_FILE_NAME = 'anomalies.pbtxt'
 
 
 class Executor(base_executor.BaseExecutor):
@@ -58,8 +58,8 @@ class Executor(base_executor.BaseExecutor):
           contain a single schema artifact.
       output_dict: Output dict from key to a list of artifacts, including:
         - output: A list of 'standard_artifacts.ExampleAnomalies' of size one.
-          It will include a single binary proto file which contains all
-          anomalies found.
+          It will include a single pbtxt file which contains all anomalies
+          found.
       exec_properties: A dict of execution properties.
         - exclude_splits: JSON-serialized list of names of splits that the
           example validator should not validate.
@@ -100,14 +100,14 @@ class Executor(base_executor.BaseExecutor):
       logging.info(
           'Validating schema against the computed statistics for '
           'split %s.', split)
-      stats_uri = io_utils.get_only_uri_in_dir(
-          artifact_utils.get_split_uri([stats_artifact], split))
-      if artifact_utils.is_artifact_version_older_than(
-          stats_artifact, artifact_utils._ARTIFACT_VERSION_FOR_STATS_UPDATE):  # pylint: disable=protected-access
-        stats = tfdv.load_statistics(stats_uri)
-      else:
-        stats = tfdv.load_stats_binary(stats_uri)
-      label_inputs = {STATISTICS_KEY: stats, SCHEMA_KEY: schema}
+      label_inputs = {
+          STATISTICS_KEY:
+              tfdv.load_statistics(
+                  io_utils.get_only_uri_in_dir(
+                      artifact_utils.get_split_uri([stats_artifact], split))),
+          SCHEMA_KEY:
+              schema
+      }
       output_uri = artifact_utils.get_split_uri(
           output_dict[ANOMALIES_KEY], split)
       label_outputs = {labels.SCHEMA_DIFF_PATH: output_uri}
@@ -148,6 +148,5 @@ class Executor(base_executor.BaseExecutor):
     schema_diff_path = value_utils.GetSoleValue(
         outputs, labels.SCHEMA_DIFF_PATH)
     anomalies = tfdv.validate_statistics(stats, schema)
-    io_utils.write_bytes_file(
-        os.path.join(schema_diff_path, DEFAULT_FILE_NAME),
-        anomalies.SerializeToString())
+    io_utils.write_pbtxt_file(
+        os.path.join(schema_diff_path, DEFAULT_FILE_NAME), anomalies)

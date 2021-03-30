@@ -282,12 +282,10 @@ def compare_anomalies(output_uri: Text, expected_uri: Text) -> bool:
       file_name = os.path.join(
           dir_name.replace(expected_uri, output_uri, 1), leaf_file)
       anomalies = anomalies_pb2.Anomalies()
-      anomalies.ParseFromString(
-          io_utils.read_bytes_file(os.path.join(output_uri, file_name)))
+      io_utils.parse_pbtxt_file(os.path.join(output_uri, file_name), anomalies)
       expected_anomalies = anomalies_pb2.Anomalies()
-      expected_anomalies.ParseFromString(
-          io_utils.read_bytes_file(
-              os.path.join(expected_uri, expected_file_name)))
+      io_utils.parse_pbtxt_file(
+          os.path.join(expected_uri, expected_file_name), expected_anomalies)
       if expected_anomalies.anomaly_info != anomalies.anomaly_info:
         return False
   return True
