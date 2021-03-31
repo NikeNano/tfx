@@ -39,6 +39,7 @@ import tensorflow_docs.api_generator as api_generator
 from tensorflow_docs.api_generator import doc_controls
 from tensorflow_docs.api_generator import generate_lib
 import tfx
+from tfx.dsl.components.base import base_component
 # pylint: disable=unused-import
 import tfx.version
 # pylint: enable=unused-import
@@ -117,6 +118,33 @@ def ignore_proto_method(path, parent, children):
   return new_children
 
 
+def ignore_component_child_classes_and_variables(path, parent, children):
+  """Remove child classes and variables from components' doc.
+
+  Args:
+    path: A tuple of name parts forming the attribute-lookup path to this
+      object. For `tf.keras.layers.Dense` path is:
+        ("tf","keras","layers","Dense")
+    parent: The parent object.
+    children: A list of (name, value) pairs. The attributes of the patent.
+
+  Returns:
+    A filtered list of children `(name, value)` pairs. With components' child
+    classes and variables removed.
+  """
+  do_not_generate_docs = ["DRIVER_CLASS", "SPEC_CLASS", "EXECUTOR_SPEC"]
+  del path
+  new_children = []
+  if not issubclass(parent, base_component.BaseComponent):
+    return children
+  new_children = []
+  for (name, obj) in children:
+    if name in do_not_generate_docs:
+      continue
+    new_children.append((name, obj))
+  return new_children
+
+
 def main(_):
 
   do_not_generate_docs_for = []
@@ -141,7 +169,9 @@ def main(_):
       # that imports them.
       callbacks=[
           api_generator.public_api.explicit_package_contents_filter,
-          ignore_test_objects, ignore_proto_method
+          ignore_test_objects,
+          ignore_proto_method,
+          ignore_component_child_classes_and_variables,
       ])
   doc_generator.build(output_dir=FLAGS.output_dir)
 

@@ -12,18 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Subpackage for TFX components."""
-# For component user to direct use tfx.components.[...] as an alias.
+"""TFX components module."""
+
+# Public APIs: tfx.components.<component name>.
+
 from tfx.components.bulk_inferrer.component import BulkInferrer
-from tfx.components.common_nodes.importer_node import ImporterNode
-from tfx.components.common_nodes.resolver_node import ResolverNode
 from tfx.components.evaluator.component import Evaluator
 from tfx.components.example_gen.component import FileBasedExampleGen
 from tfx.components.example_gen.csv_example_gen.component import CsvExampleGen
 from tfx.components.example_gen.import_example_gen.component import ImportExampleGen
 from tfx.components.example_validator.component import ExampleValidator
 from tfx.components.infra_validator.component import InfraValidator
-from tfx.components.model_validator.component import ModelValidator
 from tfx.components.pusher.component import Pusher
 from tfx.components.schema_gen.component import SchemaGen
 from tfx.components.statistics_gen.component import StatisticsGen

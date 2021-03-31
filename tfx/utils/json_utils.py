@@ -25,6 +25,7 @@ import json
 from typing import Any, Dict, List, Text, Type, Union
 
 from six import with_metaclass
+from tensorflow_docs.api_generator import doc_controls
 from tfx.utils import deprecation_utils
 from tfx.utils import proto_utils
 
@@ -68,11 +69,13 @@ class Jsonable(with_metaclass(abc.ABCMeta, object)):
   override `to_json_dict` and `from_json_dict` to customize the implementation.
   """
 
+  @doc_controls.do_not_doc_in_subclasses
   def to_json_dict(self) -> Dict[Text, Any]:
     """Convert from an object to a JSON serializable dictionary."""
     return self.__dict__
 
   @classmethod
+  @doc_controls.do_not_doc_in_subclasses
   def from_json_dict(cls, dict_data: Dict[Text, Any]) -> Any:
     """Convert from dictionary data to an object."""
     instance = cls.__new__(cls)

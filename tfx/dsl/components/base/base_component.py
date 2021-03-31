@@ -24,6 +24,7 @@ from typing import Any, Dict, Optional, Text
 
 from six import with_metaclass
 
+from tensorflow_docs.api_generator import doc_controls
 from tfx import types
 from tfx.dsl.components.base import base_driver
 from tfx.dsl.components.base import base_node
@@ -147,6 +148,7 @@ class BaseComponent(with_metaclass(abc.ABCMeta, base_node.BaseNode)):
 
   # TODO(b/170682320): This function is not widely available until we migrate
   # the entire stack to IR-based.
+  @doc_controls.do_not_doc_in_subclasses
   def with_platform_config(self, config: message.Message) -> 'BaseComponent':
     """Attaches a proto-form platform config to a component.
 
@@ -168,13 +170,16 @@ class BaseComponent(with_metaclass(abc.ABCMeta, base_node.BaseNode)):
                 self.driver_class, self.id, self.inputs, self.outputs)
 
   @property
+  @doc_controls.do_not_doc_in_subclasses
   def inputs(self) -> node_common._PropertyDictWrapper:  # pylint: disable=protected-access
     return self.spec.inputs
 
   @property
   def outputs(self) -> node_common._PropertyDictWrapper:  # pylint: disable=protected-access
+    """Component's output channel dict."""
     return self.spec.outputs
 
   @property
+  @doc_controls.do_not_doc_in_subclasses
   def exec_properties(self) -> Dict[Text, Any]:
     return self.spec.exec_properties
