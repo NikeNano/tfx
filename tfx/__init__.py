@@ -18,6 +18,9 @@
 # https://packaging.python.org/guides/packaging-namespace-packages/#pkgutil-style-namespace-packages
 __path__ = __import__('pkgutil').extend_path(__path__, __name__)
 
+
+from tfx import orchestration
 from tfx import proto
+from tfx import utils
 # Import version string.
 from tfx.version import __version__
