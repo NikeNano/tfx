@@ -13,16 +13,12 @@
 # limitations under the License.
 """Tests for tfx.components.infra_validator.executor."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import os
 import signal
 import threading
 from typing import Any, Dict, Text
+from unittest import mock
 
-import mock
 import tensorflow as tf
 from tfx.components.infra_validator import error_types
 from tfx.components.infra_validator import executor
@@ -174,6 +170,22 @@ class ExecutorTest(tf.test.TestCase):
 
     # Check not blessed.
     self.assertNotBlessed()
+
+  def testDo_MakeSavedModelWarmup(self):
+    infra_validator = executor.Executor(self._context)
+    self._request_spec.make_warmup = True
+    self._exec_properties[REQUEST_SPEC_KEY] = (
+        proto_utils.proto_to_json(self._request_spec))
+
+    with mock.patch.object(infra_validator, '_ValidateOnce'):
+      infra_validator.Do(self._input_dict, self._output_dict,
+                         self._exec_properties)
+
+    warmup_file = os.path.join(
+        self._blessing.uri, 'stamped_model', 'assets.extra',
+        'tf_serving_warmup_requests')
+    self.assertFileExists(warmup_file)
+    self.assertEqual(self._blessing.get_int_custom_property('has_model'), 1)
 
   def testValidateOnce_LoadOnly_Succeed(self):
     infra_validator = executor.Executor(self._context)
