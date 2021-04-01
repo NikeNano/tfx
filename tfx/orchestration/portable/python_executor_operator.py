@@ -60,7 +60,7 @@ class PythonExecutorOperator(base_executor_operator.BaseExecutorOperator):
   def __init__(self,
                executor_spec: message.Message,
                platform_config: Optional[message.Message] = None):
-    """Initialize an PythonExecutorOperator.
+    """Initialize a PythonExecutorOperator.
 
     Args:
       executor_spec: The specification of how to initialize the executor.
@@ -100,7 +100,22 @@ class PythonExecutorOperator(base_executor_operator.BaseExecutorOperator):
         executor_output_uri=execution_info.execution_output_uri,
         stateful_working_dir=execution_info.stateful_working_dir)
     executor = self._executor_cls(context=context)
+    return PythonExecutorOperator.run_with_executor(execution_info, executor)
 
+  @staticmethod
+  def run_with_executor(
+      execution_info: data_types.ExecutionInfo,
+      executor: base_executor.BaseExecutor
+      ) -> execution_result_pb2.ExecutorOutput:
+    """Invokers executors given an executor instance and input from the Launcher.
+
+    Args:
+      execution_info: A wrapper of the details of this execution.
+      executor: An executor instance.
+
+    Returns:
+      The output from executor.
+    """
     for _, artifact_list in execution_info.input_dict.items():
       for artifact in artifact_list:
         if isinstance(artifact, ValueArtifact):
