@@ -105,7 +105,7 @@ class BaseExecutor(with_metaclass(abc.ABCMeta, object)):
     pass
 
   def __init__(self, context: Optional[Context] = None):
-    """Constructs a beam based executor."""
+    """Constructs a basic executor."""
     self._context = context
     self._beam_pipeline_args = context.beam_pipeline_args if context else None
 
@@ -181,6 +181,61 @@ class BaseExecutor(with_metaclass(abc.ABCMeta, object)):
                        artifact_utils.jsonify_artifact_dict(outputs))
     absl.logging.debug('Execution properties for %s are: %s',
                        self.__class__.__name__, json.dumps(exec_properties))
+
+
+class BaseBeamExecutor(BaseExecutor):
+  """Abstract TFX executor class for Beam powered components."""
+
+  class Context(BaseExecutor.Context):
+    """Context class for base Beam excecutor."""
+
+    def __init__(self,
+                 beam_pipeline_args: Optional[List[Text]] = None,
+                 extra_flags: Optional[List[Text]] = None,
+                 tmp_dir: Optional[Text] = None,
+                 unique_id: Optional[Text] = None,
+                 executor_output_uri: Optional[Text] = None,
+                 stateful_working_dir: Optional[Text] = None):
+      # TODO(b/174174381): replace beam_pipeline_args with extra_flags after
+      # beam_pipeline_args is removed from BaseExecutor
+      super(BaseBeamExecutor.Context, self).__init__(
+          tmp_dir=tmp_dir,
+          unique_id=unique_id,
+          executor_output_uri=executor_output_uri,
+          stateful_working_dir=stateful_working_dir)
+      self.beam_pipeline_args = beam_pipeline_args
+      self.extra_flags = extra_flags
+
+  def __init__(self, context: Optional[Context] = None):
+    """Constructs a basic executor."""
+    self._extra_flags = context.extra_flags if context else None
+    super(BaseBeamExecutor, self).__init__(context)
+
+  # TODO(b/126182711): Look into how to support fusion of multiple executors
+  # into same pipeline.
+  def _make_beam_pipeline(self) -> _BeamPipeline:
+    """Makes beam pipeline."""
+    if not beam:
+      raise Exception(
+          'Apache Beam must be installed to use this functionality.')
+
+    result = beam.Pipeline(argv=self._beam_pipeline_args)
+
+    # TODO(b/159468583): Obivate this code block by moving the warning to Beam.
+    #
+    # pylint: disable=g-import-not-at-top
+    from apache_beam.options.pipeline_options import DirectOptions
+    from apache_beam.options.pipeline_options import PipelineOptions
+    options = PipelineOptions(self._beam_pipeline_args)
+    direct_running_mode = options.view_as(DirectOptions).direct_running_mode
+    direct_num_workers = options.view_as(DirectOptions).direct_num_workers
+    if direct_running_mode == 'in_memory' and direct_num_workers != 1:
+      absl.logging.warning(
+          'If direct_num_workers is not equal to 1, direct_running_mode should '
+          'be `multi_processing` or `multi_threading` instead of `in_memory` '
+          'in order for it to have the desired worker parallelism effect.')
+
+    return result
 
 
 class EmptyExecutor(BaseExecutor):

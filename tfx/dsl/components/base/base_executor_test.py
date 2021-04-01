@@ -31,7 +31,7 @@ from tfx import version
 from tfx.dsl.components.base import base_executor
 
 
-class _TestExecutor(base_executor.BaseExecutor):
+class _TestExecutor(base_executor.BaseBeamExecutor):
   """Fake executor for testing purpose only."""
 
   def Do(self, input_dict: Dict[Text, List[types.Artifact]],
@@ -40,10 +40,10 @@ class _TestExecutor(base_executor.BaseExecutor):
     pass
 
 
-class BaseExecutorTest(tf.test.TestCase):
+class BaseBeamExecutorTest(tf.test.TestCase):
 
   def testBeamSettings(self):
-    executor_context = base_executor.BaseExecutor.Context(
+    executor_context = base_executor.BaseBeamExecutor.Context(
         beam_pipeline_args=['--runner=DirectRunner'])
     executor = _TestExecutor(executor_context)
     options = executor._make_beam_pipeline().options.view_as(StandardOptions)
@@ -59,7 +59,7 @@ class BaseExecutorTest(tf.test.TestCase):
         ],
         options.view_as(GoogleCloudOptions).labels)
 
-    executor_context = base_executor.BaseExecutor.Context(
+    executor_context = base_executor.BaseBeamExecutor.Context(
         beam_pipeline_args=['--direct_num_workers=2'])
     executor = _TestExecutor(executor_context)
     options = executor._make_beam_pipeline().options.view_as(DirectOptions)
